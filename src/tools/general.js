@@ -64,27 +64,37 @@ async function resolveInBatches(promiseArray, batchLength = 10) {
 }
 
 const processReview = (review, remoteId) => {
-    const {text, title, rating, tripInfo, publishedDate, userProfile} = review;
+    const {text, title, rating, tripInfo, publishedDate, userProfile, id, url} = review;
     const stayDate = tripInfo ? tripInfo.stayDate : null;
     let userLocation = null;
     let userContributions = null;
     let userId = null;
-    let username = null;
+    let displayName = null;
+    let userUrl = null;
+    let reviewId = id;
+    let reviewUrl = url;
 
     log.debug(`Processing review: ${title}`);
     if (userProfile) {
-        const {hometown, contributionCounts = {}, username, id} = userProfile;
+        const {hometown, contributionCounts = {}, username, id, route} = userProfile;
         const {sumReview} = contributionCounts;
         userContributions = sumReview;
         userLocation = hometown.fallbackString;
         userId = id;
+        displayName = username;
 
         if (hometown.location) {
             userLocation = hometown.location.additionalNames.long;
         }
+
+        if (route.url) {
+            userUrl = route.url;
+        }
     }
 
     return {
+        reviewId,
+        reviewUrl,
         text,
         title,
         rating,
@@ -93,7 +103,8 @@ const processReview = (review, remoteId) => {
         userLocation,
         userContributions,
         userId,
-        username,
+        displayName,
+        userUrl,
         remoteId,
     };
 };
