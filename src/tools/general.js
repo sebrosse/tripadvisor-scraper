@@ -13,7 +13,7 @@ const {
     getReviewTagsForLocation,
 } = require('./api');
 
-const { utils: { log } } = Apify;
+const {utils: {log}} = Apify;
 
 function randomDelay(minimum = 200, maximum = 600) {
     const min = Math.ceil(minimum);
@@ -64,17 +64,20 @@ async function resolveInBatches(promiseArray, batchLength = 10) {
 }
 
 const processReview = (review, remoteId) => {
-    const { text, title, rating, tripInfo, publishedDate, userProfile } = review;
+    const {text, title, rating, tripInfo, publishedDate, userProfile} = review;
     const stayDate = tripInfo ? tripInfo.stayDate : null;
     let userLocation = null;
     let userContributions = null;
+    let userId = null;
+    let username = null;
 
     log.debug(`Processing review: ${title}`);
     if (userProfile) {
-        const { hometown, contributionCounts = {} } = userProfile;
-        const { sumReview } = contributionCounts;
+        const {hometown, contributionCounts = {}, username, id} = userProfile;
+        const {sumReview} = contributionCounts;
         userContributions = sumReview;
         userLocation = hometown.fallbackString;
+        userId = id;
 
         if (hometown.location) {
             userLocation = hometown.location.additionalNames.long;
@@ -89,6 +92,8 @@ const processReview = (review, remoteId) => {
         publishedDate,
         userLocation,
         userContributions,
+        userId,
+        username,
         remoteId,
     };
 };
@@ -114,15 +119,15 @@ async function getReviews(id, client) {
 
     try {
         const resp = await callForReview(id, client, offset, limit);
-        const { errors } = resp.data[0];
+        const {errors} = resp.data[0];
 
         if (errors) {
             log.error('Graphql error', errors);
         }
 
         const reviewData = resp.data[0].data.locations[0].reviewList || {};
-        const { totalCount } = reviewData;
-        let { reviews = [] } = reviewData;
+        const {totalCount} = reviewData;
+        let {reviews = []} = reviewData;
         const lastIndex = findLastReviewIndex(reviews);
         const shouldSlice = lastIndex >= 0;
         if (shouldSlice) {
@@ -149,7 +154,7 @@ async function getReviews(id, client) {
             offset += limit;
             response = await callForReview(id, client, offset, limit);
             const reviewData = response.data[0].data.locations[0].reviewList;
-            let { reviews } = reviewData;
+            let {reviews} = reviewData;
             const lastIndex = findLastReviewIndex(reviews);
             const shouldSlice = lastIndex >= 0;
             if (shouldSlice) {
@@ -171,13 +176,13 @@ function getRequestListSources(locationId, includeHotels, includeRestaurants, in
     if (includeHotels) {
         sources.push({
             url: buildHotelUrl(locationId),
-            userData: { initialHotel: true },
+            userData: {initialHotel: true},
         });
     }
     if (includeRestaurants) {
         sources.push({
             url: buildRestaurantUrl(locationId),
-            userData: { initialRestaurant: true },
+            userData: {initialRestaurant: true},
         });
     }
     if (includeAttractions) {
@@ -203,6 +208,7 @@ async function getClient(session) {
         ...getAgentOptions(session),
     });
 }
+
 function validateInput(input) {
     const {
         locationFullName,
